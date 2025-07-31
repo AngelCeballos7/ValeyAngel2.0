@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>Lluvia Gigante de Amor</title>
+  <style>
+    body {
+      margin: 0;
+      background: black;
+      overflow: hidden;
+      cursor: none;
+      touch-action: manipulation;
+    }
+    canvas {
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .center-message {
+      font-family: 'Courier New', monospace;
+      color: #ff69b4;
+      font-size: 6rem;
+      text-align: center;
+      opacity: 0.8;
+      text-shadow: 0 0 10px rgba(255, 105, 180, 0.7);
+    }
+    @media (max-width: 768px) {
+      .center-message {
+        font-size: 3rem;
+      }
+    }
+    .heart-cursor {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      z-index: 9999;
+      pointer-events: none;
+      transition: transform 0.1s ease;
+      filter: drop-shadow(0 0 4px #ff69b4);
+    }
+    #audio-control {
+      position: absolute;
+      opacity: 0;
+      z-index: -1;
+    }
+  </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<div class="overlay">
+  <div class="center-message">ME ENCANTAS 💖</div>
+</div>
+<img id="cursor" class="heart-cursor" src="https://upload.wikimedia.org/wikipedia/commons/2/20/Heart_corazón.svg" alt="heart">
+
+<audio id="audio-control" loop>
+  <source src="musica.mp3" type="audio/mpeg">
+  Tu navegador no soporta el elemento de audio.
+</audio>
+
+<script>
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const audio = document.getElementById('audio-control');
+    function playAudio() {
+      audio.volume = 0.8;
+      audio.play().catch(console.error);
+    }
+    document.body.addEventListener(isTouchDevice ? 'touchstart' : 'click', playAudio, { once: true });
+  });
+
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const cursor = document.getElementById('cursor');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  if (!isTouchDevice) {
+    document.addEventListener('mousemove', e => {
+      cursor.style.left = `${e.clientX - 16}px`;
+      cursor.style.top = `${e.clientY - 16}px`;
+    });
+  } else {
+    cursor.style.display = 'none';
+  }
+
+  const text = "ME ENCANTAS 💖";
+  const fontSize = 32;
+  const columns = Math.floor(canvas.width / (fontSize * 1.5));
+  const drops = Array(columns).fill(1);
+  ctx.font = `bold ${fontSize}px monospace`;
+
+  function drawMatrix() {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#ff69b4";
+    for (let i = 0; i < drops.length; i++) {
+      const x = i * fontSize * 1.5;
+      const y = drops[i] * fontSize;
+      ctx.shadowColor = "rgba(255, 105, 180, 0.7)";
+      ctx.shadowBlur = 10;
+      ctx.fillText(text, x, y);
+      ctx.shadowBlur = 0;
+      drops[i]++;
+      if (y > canvas.height && Math.random() > 0.985) drops[i] = 0;
+    }
+  }
+
+  let particles = [];
+  function createExplosion(x, y) {
+    const directions = [
+      {x: 0, y: -1}, {x: 0, y: 1},
+      {x: -1, y: 0}, {x: 1, y: 0}
+    ];
+    directions.forEach(dir => {
+      particles.push({
+        x, y,
+        vx: dir.x * (3 + Math.random() * 2),
+        vy: dir.y * (3 + Math.random() * 2),
+        alpha: 1,
+        size: fontSize + Math.random() * 30,
+        color: "#ff69b4"
+      });
+    });
+
+    for (let i = 0; i < 12; i++) {
+      particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 6,
+        vy: (Math.random() - 0.5) * 6,
+        alpha: 1,
+        size: fontSize + Math.random() * 20,
+        color: "#ff69b4"
+      });
+    }
+  }
+
+  canvas.addEventListener(isTouchDevice ? 'touchstart' : 'click', e => {
+    const x = isTouchDevice ? e.touches[0].clientX : e.clientX;
+    const y = isTouchDevice ? e.touches[0].clientY : e.clientY;
+    createExplosion(x, y);
+  });
+
+  function drawParticles() {
+    particles.forEach((p, i) => {
+      ctx.globalAlpha = p.alpha;
+      ctx.font = `bold ${p.size}px monospace`;
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 15;
+      ctx.fillText(text, p.x, p.y);
+      ctx.shadowBlur = 0;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.alpha -= 0.005;
+      if (p.alpha <= 0) particles.splice(i, 1);
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  function animate() {
+    drawMatrix();
+    drawParticles();
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+
+  window.addEventListener("resize", () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    drops.length = Math.floor(canvas.width / (fontSize * 1.5));
+    drops.fill(1);
+  });
+</script>
+</body>
+</html>
